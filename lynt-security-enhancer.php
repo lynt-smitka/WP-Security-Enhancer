@@ -164,26 +164,43 @@ class Lynt_Enhancer
     return $user;
   }
 
-  public function new_ip_invalidate_sessions()
+  public function new_ip_invalidate_sessions() 
   {
-    if (is_user_logged_in()) {
-      $user_id = get_current_user_id();
-      $current_ip = $_SERVER['REMOTE_ADDR'];
-
-      $session_tokens = get_user_meta($user_id, 'session_tokens', true);
-      $sessions = maybe_unserialize($session_tokens);
-
-      if (is_array($sessions)) {
-        foreach ($sessions as $token => $session) {
-          if ($session['ip'] !== $current_ip) {
-            WP_Session_Tokens::get_instance($user_id)->destroy_all();
-            break;
-          }
+    if (is_user_logged_in() && current_user_can( 'manage_options' )) {
+ 
+        if (isset( $_SERVER['HTTP_X_WP_NONCE']) ) {
+            $rest_nonce = $_SERVER['HTTP_X_WP_NONCE'];
+            if ( wp_verify_nonce( $rest_nonce, 'wp_rest' ) ) {
+                return;
+            }
         }
-      }
-
+         
+        if (isset($_REQUEST['wp_scrape_key']) && isset($_REQUEST['wp_scrape_nonce']) ) {
+            $scrape_key = $_REQUEST['wp_scrape_key'];
+            $scrape_nonce = $_REQUEST['wp_scrape_nonce'];
+            $stored_scrape_nonce = get_transient('scrape_key_' . $scrape_key);
+            if ($scrape_nonce === $stored_scrape_nonce) {
+                return;         
+            }
+        }
+ 
+        $user_id = get_current_user_id();
+        $current_ip = $_SERVER['REMOTE_ADDR'];
+         
+        $session_tokens = get_user_meta($user_id, 'session_tokens', true);
+        $sessions = maybe_unserialize($session_tokens);
+         
+        if (is_array($sessions)) {
+            foreach ($sessions as $token => $session) {
+                if ($session['ip'] !== $current_ip) {
+                    WP_Session_Tokens::get_instance($user_id)->destroy_all();
+                    break;
+                }
+            }
+        }
     }
-  }
+}
+
 
 
   public function admin_actions_check_referrer()

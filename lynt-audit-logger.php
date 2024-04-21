@@ -562,7 +562,7 @@ class Lynt_Event_Logger
                         'plugin_version' => $plugin_data['Version']
                     );
 
-                    $this->log('plugin_updade', "Plugin {$plugin_data['Name']} updated to {$plugin_data['Version']}", $details);
+                    $this->log('plugin_update', "Plugin {$plugin_data['Name']} updated to {$plugin_data['Version']}", $details);
                 }
             } elseif ('theme' === $type) {
                 foreach ($options['themes'] as $theme_css) {

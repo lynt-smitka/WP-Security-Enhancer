@@ -60,6 +60,9 @@ class Lynt_Enhancer
           case 'bcrypt_hash':
             $this->bcrypt_hash();
             break;
+          case 'argon2_hash':
+            $this->argon2_hash();
+            break;
           case 'rehash_passwords':
             add_filter('authenticate', array($this, 'rehash_passwords'), 30, 3);
             break;
@@ -88,9 +91,10 @@ class Lynt_Enhancer
   }
 
 
-  public function what_hash($hash){
+  public function what_hash($hash)
+  {
 
-    if (strpos($hash,'$P$') === 0 ) {
+    if (strpos($hash, '$P$') === 0) {
       return "phpass";
     }
 
@@ -98,7 +102,7 @@ class Lynt_Enhancer
       return "bcrypt";
     }
 
-    if (strpos($hash,'$argon2') === 0) {
+    if (strpos($hash, '$argon2') === 0) {
       return "argon2";
     }
 
@@ -162,7 +166,10 @@ class Lynt_Enhancer
       return $user;
     }
     $stored_hash = $user->data->user_pass;
-    if ( $this->enabled_features['bcrypt_hash'] && $this->what_hash($stored_hash) === "bcrypt" ) {
+    if ($this->enabled_features['bcrypt_hash'] && $this->what_hash($stored_hash) === "bcrypt") {
+      return $user;
+    }
+    if ($this->enabled_features['argon2_hash'] && $this->what_hash($stored_hash) === "argon2") {
       return $user;
     }
     wp_set_password($password, $user->ID);
@@ -221,42 +228,42 @@ class Lynt_Enhancer
     return $user;
   }
 
-  public function new_ip_invalidate_sessions() 
+  public function new_ip_invalidate_sessions()
   {
-    if (is_user_logged_in() && current_user_can( 'manage_options' )) {
- 
-        if (isset( $_SERVER['HTTP_X_WP_NONCE']) ) {
-            $rest_nonce = $_SERVER['HTTP_X_WP_NONCE'];
-            if ( wp_verify_nonce( $rest_nonce, 'wp_rest' ) ) {
-                return;
-            }
+    if (is_user_logged_in() && current_user_can('manage_options')) {
+
+      if (isset($_SERVER['HTTP_X_WP_NONCE'])) {
+        $rest_nonce = $_SERVER['HTTP_X_WP_NONCE'];
+        if (wp_verify_nonce($rest_nonce, 'wp_rest')) {
+          return;
         }
-         
-        if (isset($_REQUEST['wp_scrape_key']) && isset($_REQUEST['wp_scrape_nonce']) ) {
-            $scrape_key = $_REQUEST['wp_scrape_key'];
-            $scrape_nonce = $_REQUEST['wp_scrape_nonce'];
-            $stored_scrape_nonce = get_transient('scrape_key_' . $scrape_key);
-            if ($scrape_nonce === $stored_scrape_nonce) {
-                return;         
-            }
+      }
+
+      if (isset($_REQUEST['wp_scrape_key']) && isset($_REQUEST['wp_scrape_nonce'])) {
+        $scrape_key = $_REQUEST['wp_scrape_key'];
+        $scrape_nonce = $_REQUEST['wp_scrape_nonce'];
+        $stored_scrape_nonce = get_transient('scrape_key_' . $scrape_key);
+        if ($scrape_nonce === $stored_scrape_nonce) {
+          return;
         }
- 
-        $user_id = get_current_user_id();
-        $current_ip = $_SERVER['REMOTE_ADDR'];
-         
-        $session_tokens = get_user_meta($user_id, 'session_tokens', true);
-        $sessions = maybe_unserialize($session_tokens);
-         
-        if (is_array($sessions)) {
-            foreach ($sessions as $token => $session) {
-                if ($session['ip'] !== $current_ip) {
-                    WP_Session_Tokens::get_instance($user_id)->destroy_all();
-                    break;
-                }
-            }
+      }
+
+      $user_id = get_current_user_id();
+      $current_ip = $_SERVER['REMOTE_ADDR'];
+
+      $session_tokens = get_user_meta($user_id, 'session_tokens', true);
+      $sessions = maybe_unserialize($session_tokens);
+
+      if (is_array($sessions)) {
+        foreach ($sessions as $token => $session) {
+          if ($session['ip'] !== $current_ip) {
+            WP_Session_Tokens::get_instance($user_id)->destroy_all();
+            break;
+          }
         }
+      }
     }
-}
+  }
 
 
 

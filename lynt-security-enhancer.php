@@ -116,6 +116,45 @@ class Lynt_Enhancer
     }
   }
 
+  //TODO: When replacing a hasher, it is no longer possible to verify the original hashes - backward compatibility needs to be done
+  public function argon2_hash()
+  {
+
+    if (!is_callable('Sodium\crypto_pwhash_str')) {
+      require_once (ABSPATH . WPINC . '/sodium_compat/autoload.php');
+    }
+
+    if (!function_exists('wp_hash_password')) {
+      function wp_hash_password($password)
+      {
+        return \Sodium\crypto_pwhash_str(
+          $password,
+          SODIUM_CRYPTO_PWHASH_OPSLIMIT_INTERACTIVE,
+          SODIUM_CRYPTO_PWHASH_MEMLIMIT_INTERACTIVE
+        );
+      }
+    }
+
+    if (!function_exists('wp_check_password')) {
+      function wp_check_password($password, $hash, $user_id = '')
+      {
+        return \Sodium\crypto_pwhash_str_verify($hash, $password);
+      }
+    }
+
+    if (!function_exists('wp_set_password')) {
+      function wp_set_password($password, $user_id)
+      {
+        global $wpdb;
+
+        $hash = wp_hash_password($password);
+        $wpdb->update($wpdb->users, array('user_pass' => $hash), array('ID' => $user_id));
+
+        wp_cache_delete($user_id, 'users');
+      }
+    }
+
+  }
 
   public function rehash_passwords($user, $username, $password)
   {

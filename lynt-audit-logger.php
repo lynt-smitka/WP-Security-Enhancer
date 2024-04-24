@@ -128,7 +128,7 @@ class Lynt_Event_Logger
                         add_action('wp_login', array($this, 'log_user_login'), 10, 2);
                         break;
                     case 'user_logout':
-                        add_action('wp_logout', array($this, 'log_user_logout'), 10, 2);
+                        add_action('wp_logout', array($this, 'log_user_logout'), 10, 1);
                         break;
                     case 'user_login_failed':
                         add_action('wp_login_failed', array($this, 'log_user_login_failed'));

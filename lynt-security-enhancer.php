@@ -15,7 +15,7 @@ defined('ABSPATH') or die('nothing here');
 $enabled_features = [
 
   'bcrypt_hash' => true,
-  'bcrypt_rehash_passwords' => true,
+  'rehash_passwords' => true,
   'filter_rest_users' => true,
   'filter_rest_comments' => true,
   'failed_login_401' => true,
@@ -60,8 +60,8 @@ class Lynt_Enhancer
           case 'bcrypt_hash':
             $this->bcrypt_hash();
             break;
-          case 'bcrypt_rehash_passwords':
-            add_action('wp_authenticate_user', array($this, 'bcrypt_rehash_passwords'), 10, 2);
+          case 'rehash_passwords':
+            add_filter('authenticate', array($this, 'rehash_passwords'), 30, 3);
             break;
           case 'filter_rest_users':
             add_filter('rest_prepare_user', array($this, 'remove_sensitive_data_from_rest_user'));
@@ -88,6 +88,24 @@ class Lynt_Enhancer
   }
 
 
+  public function what_hash($hash){
+
+    if (strpos($hash,'$P$') === 0 ) {
+      return "phpass";
+    }
+
+    if (strpos($hash, '$2a$') === 0) {
+      return "bcrypt";
+    }
+
+    if (strpos($hash,'$argon2') === 0) {
+      return "argon2";
+    }
+
+    return "unknown";
+
+  }
+
   public function bcrypt_hash()
   {
     global $wp_hasher;
@@ -99,13 +117,13 @@ class Lynt_Enhancer
   }
 
 
-  public function bcrypt_rehash_passwords($user, $password)
+  public function rehash_passwords($user, $username, $password)
   {
     if (!$user instanceof WP_User) {
       return $user;
     }
     $stored_hash = $user->data->user_pass;
-    if (strpos($stored_hash, '$2a$') === 0) {
+    if ( $this->enabled_features['bcrypt_hash'] && $this->what_hash($stored_hash) === "bcrypt" ) {
       return $user;
     }
     wp_set_password($password, $user->ID);
